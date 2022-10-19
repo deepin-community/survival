@@ -1,0 +1,3 @@
+r-cran-survival: executable-not-elf-or-script usr/lib/R/library/survival/COPYRIGHTS
+r-cran-survival: executable-not-elf-or-script usr/lib/R/library/survival/CITATION
+r-cran-survival: executable-not-elf-or-script usr/lib/R/library/survival/NEWS.Rd

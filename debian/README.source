@@ -1,0 +1,139 @@
+Explanation for binary files inside source package according to
+  http://lists.debian.org/debian-devel/2013/09/msg00332.html
+
+Files: data/bladder.rda
+Documentation: man/bladder.Rd
+  -> Source: Andrews DF, Hertzberg AM (1985)
+
+Files: data/cgd.rda
+Documentation: man/cgd.Rd
+  -> Source: Fleming and Harrington, Counting Processes and Survival Analysis, appendix D.2. 
+
+Files: data/colon.rda
+Documentation: man/colon.Rd
+  -> Source:   JA Laurie, CG Moertel, TR Fleming, HS Wieand, JE Leigh, J Rubin,
+     GW McCormack, JB Gerstner, JE Krook and J Malliard.  Surgical
+     adjuvant therapy of large-bowel carcinoma: An evaluation of
+     levamisole and the combination of levamisole and fluorouracil:
+     The North Central Cancer Treatment Group and the Mayo Clinic.
+     J Clinical Oncology, 7:1447-1456, 1989.
+
+Files: data/flchain.rda
+Documentation: man/flchain.Rd
+  -> Source: A Dispenzieri, J Katzmann, R Kyle, D Larson, T Therneau,
+     C Colby, R Clark, G Mead, S Kumar, LJ Melton III and SV Rajkumar (2012).
+
+Files: data/genfan.rda
+Documentation: man/genfan.Rd
+  -> Source: Nelson, Journal of Quality Technology, 1:27-52, 1969
+
+Files: data/heart.rda
+Documentation: man/heart.Rd
+  -> Source: J Crowley and M Hu (1977), Covariance analysis of heart transplant survival data.
+     Journal of the American Statistical Association, 72, 27--36.
+
+Files: data/kidney.rda
+Documentation: man/kidney.Rd
+  -> Source:  CA McGilchrist, CW Aisbett (1991), Regression with frailty in survival analysis. 
+     Biometrics, 47, 461--66.
+
+Files: data/logan.rda
+Documentation: man/logan.Rd
+  -> Source:   Logan, John A. (1983). A Multivariate Model for Mobility Tables.
+     American Journal of Sociology} 89: 324-349.
+
+Files: data/lung.rda
+Documentation: man/lung.Rd
+  -> Source:  Loprinzi CL. Laurie JA. Wieand HS. Krook JE. Novotny PJ.
+     Kugler JW. Bartel J. Law M. Bateman M. Klatt NE. et al.
+     Prospective evaluation of prognostic variables from patient-completed
+     questionnaires. North Central Cancer Treatment Group.
+     Journal of Clinical Oncology. 12(3):601-7, 1994. 
+
+Files: data/mgus.rda
+Documentation: man/mgus.Rd
+  -> Source: R Kyle, Benign monoclonal gammopathy -- after 20 to 35 years of
+     follow-up, Mayo Clinic Proc 1993; 68:26-36. .
+
+Files: data/mgus2.rda
+Documentation: man/mgus2.Rd
+  -> Source:  R. Kyle, T. Therneau, V. Rajkumar, J. Offord, D. Larson, M. Plevak,
+     and L. J. Melton III, A long-terms study of prognosis in monoclonal
+     gammopathy of undertermined significance. New Engl J Med, 346:564-569 (2002).
+
+Files: data/myeloid.rda
+Documentation: man/myeloid.Rd
+  -> Source: This is a simulated data set.
+
+Files: data/nwtco.rda
+Documentation: man/nwtco.Rd
+  -> Source: NE Breslow and N Chatterjee (1999),
+     Design and analysis of two-phase studies with binary outcome applied
+     to Wilms tumour prognosis. Applied Statistics, 48, 457--68.
+
+Files: data/ovarian.rda
+Documentation: man/ovarian.Rd
+  -> Source: Edmunson, J.H., Fleming, T.R., Decker, D.G.,
+     Malkasian, G.D., Jefferies, J.A., Webb, M.J., and Kvols, L.K.,
+     Different Chemotherapeutic Sensitivities and Host Factors Affecting
+     Prognosis in Advanced Ovarian Carcinoma vs. Minimal Residual Disease.
+     Cancer Treatment Reports, 63:241-47, 1979.
+
+Files: data/pbc.rda
+Documentation: man/pbc.Rd
+  -> Source: T Therneau and P Grambsch (2000),
+     Modeling Survival Data: Extending the Cox Model,
+     Springer-Verlag, New York. ISBN: 0-387-98784-3.
+
+Files: data/rats.rda
+Documentation: man/rats.Rd
+  -> Source: E. W. Lee, L. J. Wei, and D. Amato, Cox-type regression analysis
+     for large number of small groups of correlated failure time observations,
+     in "Survival Analysis, State of the Art", Kluwer, 1992.
+
+Files: data/retinopathy.rda
+Documentation: man/retinopathy.Rd
+  -> Source: W. J. Huster, R. Brookmeyer and S. G. Self (1989).
+     Modelling paired survival data with covariates,
+     Biometrics 45:145-156.
+
+Files: data/rhDNase.rda
+Documentation: man/rhDNase.Rd
+  -> Source: T Therneau and P Grambsch (2000),
+     Modeling Survival Data: Extending the Cox Model,
+     Springer-Verlag, New York. ISBN: 0-387-98784-3.
+
+Files: data/solder.rda
+Documentation: man/solder.Rd
+  -> Source: J Chambers and T Hastie, Statistical models in S.  Chapman and Hall, 1993.
+
+Files: data/stanford2.rda
+Documentation: man/stanford2.Rd
+  -> Source:  LA Escobar and WQ Meeker Jr (1992),
+     Assessing influence in regression analysis with censored data.
+     Biometrics, 48, 507--528.
+
+Files: data/survexp.rda
+Documentation: man/survexp.Rd
+  -> Source: T Therneau and P Grambsch (2000),
+     Modeling Survival Data: Extending the Cox Model,
+     Springer-Verlag, New York. ISBN: 0-387-98784-3.
+
+Files: data/transplant.rda
+Documentation: man/transplant.Rd
+  -> Source: Kim WR, Therneau TM, Benson JT, Kremers WK, Rosen CB, Gores GJ, Dickson ER. 
+     Deaths on the liver transplant waiting list: An analysis of competing risks. 
+     Hepatology 2006 Feb; 43(2):345-51.
+
+Files: data/uspop2.rda
+Documentation: man/uspop2.Rd
+  -> Source: NP2008_D1:  Projected Population by Single Year of Age, Sex, Race, and Hispanic 
+     Origin for the United States: July 1, 2000 to July 1, 2050,
+     www.census.gov/population/projections.
+
+Files: data/veteran.rda
+Documentation: man/veteran.Rd
+  -> Source: D Kalbfleisch and RL Prentice (1980),
+     The Statistical Analysis of Failure Time Data. Wiley, New York.
+
+ -- Dirk Eddelbuettel <edd@debian.org>, Mon, 16 Apr 2018 20:37:17 -0500
