@@ -6,6 +6,7 @@ coxph <- function(formula, data, weights, subset, na.action,
         model=FALSE, x=FALSE, y=TRUE,  tt, method=ties, 
         id, cluster, istate, statedata, nocenter=c(-1, 0, 1), ...) {
 
+    missing.ties <- missing(ties) & missing(method) #see later multistate sect
     ties <- match.arg(ties)
     Call <- match.call()
     ## We want to pass any ... args to coxph.control, but not pass things
@@ -146,19 +147,22 @@ coxph <- function(formula, data, weights, subset, na.action,
 
     if (!multi && multiform)
         stop("formula is a list but the response is not multi-state")
-    if (multi && length(attr(Terms, "specials")$frailty) >0)
-        stop("multi-state models do not currently support frailty terms")
-    if (multi && length(attr(Terms, "specials")$pspline) >0)
-        stop("multi-state models do not currently support pspline terms")
-    if (multi && length(attr(Terms, "specials")$ridge) >0)
-        stop("multi-state models do not currently support ridge penalties")
-
+    if (multi) {
+        if (length(attr(Terms, "specials")$frailty) >0)
+            stop("multi-state models do not currently support frailty terms")
+        if (length(attr(Terms, "specials")$pspline) >0)
+            stop("multi-state models do not currently support pspline terms")
+        if (length(attr(Terms, "specials")$ridge) >0)
+            stop("multi-state models do not currently support ridge penalties")
+        if (!missing.ties) method <- ties <- "breslow"
+    }
+    
     if (control$timefix) Y <- aeqSurv(Y)
     if (length(attr(Terms, 'variables')) > 2) { # a ~1 formula has length 2
-        ytemp <- terms.inner(formula[1:2])
+        ytemp <- innerterms(formula[1:2])
         suppressWarnings(z <- as.numeric(ytemp)) # are any of the elements numeric?
         ytemp <- ytemp[is.na(z)]  # toss numerics, e.g. Surv(t, 1-s)
-        xtemp <- terms.inner(formula[-2])
+        xtemp <- innerterms(formula[-2])
         if (any(!is.na(match(xtemp, ytemp))))
             warning("a variable appears on both the left and right sides of the formula")
     }
@@ -194,91 +198,95 @@ coxph <- function(formula, data, weights, subset, na.action,
     if (missing(tt)) tt <- NULL
     if (length(timetrans)) {
         if (multi || isSurv2) stop("the tt() transform is not implemented for multi-state or Surv2 models")
-         timetrans <- untangle.specials(Terms, 'tt')
-         ntrans <- length(timetrans$terms)
+        # begin tt() preprocessing
+        timetrans <- untangle.specials(Terms, 'tt')
+        ntrans <- length(timetrans$terms)
 
-         if (is.null(tt)) {
-             tt <- function(x, time, riskset, weights){ #default to O'Brien's logit rank
-                 obrien <- function(x) {
-                     r <- rank(x)
-                     (r-.5)/(.5+length(r)-r)
-                 }
-                 unlist(tapply(x, riskset, obrien))
-             }
-         }
-         if (is.function(tt)) tt <- list(tt)  #single function becomes a list
-             
-         if (is.list(tt)) {
-             if (any(!sapply(tt, is.function))) 
-                 stop("The tt argument must contain function or list of functions")
-             if (length(tt) != ntrans) {
-                 if (length(tt) ==1) {
-                     temp <- vector("list", ntrans)
-                     for (i in 1:ntrans) temp[[i]] <- tt[[1]]
-                     tt <- temp
-                 }
-                 else stop("Wrong length for tt argument")
-             }
-         }
-         else stop("The tt argument must contain a function or list of functions")
+        if (is.null(tt)) {
+            tt <- function(x, time, riskset, weights){ #default to O'Brien's logit rank
+                obrien <- function(x) {
+                    r <- rank(x)
+                    (r-.5)/(.5+length(r)-r)
+                }
+                unlist(tapply(x, riskset, obrien))
+            }
+        }
+        if (is.function(tt)) tt <- list(tt)  #single function becomes a list
+            
+        if (is.list(tt)) {
+            if (any(!sapply(tt, is.function))) 
+                stop("The tt argument must contain function or list of functions")
+            if (length(tt) != ntrans) {
+                if (length(tt) ==1) {
+                    temp <- vector("list", ntrans)
+                    for (i in 1:ntrans) temp[[i]] <- tt[[1]]
+                    tt <- temp
+                }
+                else stop("Wrong length for tt argument")
+            }
+        }
+        else stop("The tt argument must contain a function or list of functions")
 
-         if (ncol(Y)==2) {
-             if (length(strats)==0) {
-                 sorted <- order(-Y[,1], Y[,2])
-                 newstrat <- rep.int(0L, nrow(Y))
-                 newstrat[1] <- 1L
-                 }
-             else {
-                 sorted <- order(istrat, -Y[,1], Y[,2])
-                 #newstrat marks the first obs of each strata
-                 newstrat <-  as.integer(c(1, 1*(diff(istrat[sorted])!=0))) 
-                 }
-             if (storage.mode(Y) != "double") storage.mode(Y) <- "double"
-             counts <- .Call(Ccoxcount1, Y[sorted,], 
-                             as.integer(newstrat))
-             tindex <- sorted[counts$index]
-         }
-         else {
-             if (length(strats)==0) {
-                 sort.end  <- order(-Y[,2], Y[,3])
-                 sort.start<- order(-Y[,1])
-                 newstrat  <- c(1L, rep(0, nrow(Y) -1))
-             }
-             else {
-                 sort.end  <- order(istrat, -Y[,2], Y[,3])
-                 sort.start<- order(istrat, -Y[,1])
-                 newstrat  <- c(1L, as.integer(diff(istrat[sort.end])!=0))
-             }
-             if (storage.mode(Y) != "double") storage.mode(Y) <- "double"
-             counts <- .Call(Ccoxcount2, Y, 
-                             as.integer(sort.start -1L),
-                             as.integer(sort.end -1L), 
-                             as.integer(newstrat))
-             tindex <- counts$index
-         }
-         Y <- Surv(rep(counts$time, counts$nrisk), counts$status)
-         type <- 'right'  # new Y is right censored, even if the old was (start, stop]
+        if (ncol(Y)==2) {
+            if (length(strats)==0) {
+                sorted <- order(-Y[,1], Y[,2])
+                newstrat <- rep.int(0L, nrow(Y))
+                newstrat[1] <- 1L
+                }
+            else {
+                sorted <- order(istrat, -Y[,1], Y[,2])
+                #newstrat marks the first obs of each strata
+                newstrat <-  as.integer(c(1, 1*(diff(istrat[sorted])!=0))) 
+                }
+            if (storage.mode(Y) != "double") storage.mode(Y) <- "double"
+            counts <- .Call(Ccoxcount1, Y[sorted,], 
+                            as.integer(newstrat))
+            tindex <- sorted[counts$index]
+        }
+        else {
+            if (length(strats)==0) {
+                sort.end  <- order(-Y[,2], Y[,3])
+                sort.start<- order(-Y[,1])
+                newstrat  <- c(1L, rep(0, nrow(Y) -1))
+            }
+            else {
+                sort.end  <- order(istrat, -Y[,2], Y[,3])
+                sort.start<- order(istrat, -Y[,1])
+                newstrat  <- c(1L, as.integer(diff(istrat[sort.end])!=0))
+            }
+            if (storage.mode(Y) != "double") storage.mode(Y) <- "double"
+            counts <- .Call(Ccoxcount2, Y, 
+                            as.integer(sort.start -1L),
+                            as.integer(sort.end -1L), 
+                            as.integer(newstrat))
+            tindex <- counts$index
+        }
+        Y <- Surv(rep(counts$time, counts$nrisk), counts$status)
+        type <- 'right'  # new Y is right censored, even if the old was (start, stop]
 
-         mf <- mf[tindex,]
-         istrat <- rep(1:length(counts$nrisk), counts$nrisk)
-         weights <- model.weights(mf)
-         if (!is.null(weights) && any(!is.finite(weights)))
-             stop("weights must be finite")  
+        mf <- mf[tindex,]
+        istrat <- rep(1:length(counts$nrisk), counts$nrisk)
+        weights <- model.weights(mf)
+        if (!is.null(weights) && any(!is.finite(weights)))
+            stop("weights must be finite") 
+        id <- model.extract(mf, "id")   # update the id and/or cluster, if present
+        cluster <- model.extract(mf, "cluster")
 
-         tcall <- attr(Terms, 'variables')[timetrans$terms+2]
-         pvars <- attr(Terms, 'predvars')
-         pmethod <- sub("makepredictcall.", "", as.vector(methods("makepredictcall")))
-         for (i in 1:ntrans) {
-             newtt <- (tt[[i]])(mf[[timetrans$var[i]]], Y[,1], istrat, weights)
-             mf[[timetrans$var[i]]] <- newtt
-             nclass <- class(newtt)
-             if (any(nclass %in% pmethod)) { # It has a makepredictcall method
-                 dummy <- as.call(list(as.name(class(newtt)[1]), tcall[[i]][[2]]))
-                 ptemp <- makepredictcall(newtt, dummy)
-                 pvars[[timetrans$terms[i]+2]] <- ptemp
-             }
-         }
-         attr(Terms, "predvars") <- pvars
+        tcall <- attr(Terms, 'variables')[timetrans$terms+2]
+        pvars <- attr(Terms, 'predvars')
+        pmethod <- sub("makepredictcall.", "", as.vector(methods("makepredictcall")))
+        for (i in 1:ntrans) {
+            newtt <- (tt[[i]])(mf[[timetrans$var[i]]], Y[,1], istrat, weights)
+            mf[[timetrans$var[i]]] <- newtt
+            nclass <- class(newtt)
+            if (any(nclass %in% pmethod)) { # It has a makepredictcall method
+                dummy <- as.call(list(as.name(class(newtt)[1]), tcall[[i]][[2]]))
+                ptemp <- makepredictcall(newtt, dummy)
+                pvars[[timetrans$terms[i]+2]] <- ptemp
+            }
+        }
+        attr(Terms, "predvars") <- pvars
+        # end tt() preprocessing
         }
    
     xlevels <- .getXlevels(Terms, mf)
@@ -427,9 +435,15 @@ coxph <- function(formula, data, weights, subset, na.action,
     attr(X, "assign") <- Xatt$assign[!xdrop]
     attr(X, "contrasts") <- Xatt$contrasts
     offset <- model.offset(mf)
-    if (is.null(offset) | all(offset==0)) offset <- rep(0., nrow(mf))
-    else if (any(!is.finite(offset) | !is.finite(exp(offset)))) 
+    if (is.null(offset) || all(offset==0)) {
+        offset <- rep(0., nrow(mf))
+        meanoffset <- 0
+    } else if (any(!is.finite(offset) | !is.finite(exp(offset)))) 
         stop("offsets must lead to a finite risk score")
+    else {
+        meanoffset <- mean(offset)
+        offset <- offset - meanoffset  # this can help stability of exp()
+    }
         
     weights <- model.weights(mf)
     if (!is.null(weights) && any(!is.finite(weights)))
@@ -460,10 +474,14 @@ coxph <- function(formula, data, weights, subset, na.action,
     }
     if (multi) {
         if (length(strats) >0) {
-            stratum_map <- tmap[c(1L, strats),] # strats includes Y, + tmap has an extra row
-            stratum_map[-1,] <- ifelse(stratum_map[-1,] >0, 1L, 0L)
-            if (nrow(stratum_map) > 2) {
-                temp <- stratum_map[-1,]
+            # tmap starts with a "(Baseline)" row, which we want
+            # strats is indexed off the data frame, which includes the response, so
+            #  turns out to be correct for the remaining rows of tmap
+            smap <- tmap[c(1L, strats),] 
+            smap[-1,] <- ifelse(smap[-1,] >0, 1L, 0L)
+            if (nrow(smap) > 2) {
+                # multi state with more than 1 strata statement -- really unusual
+                temp <- smap[-1,]
                 if (!all(apply(temp, 2, function(x) all(x==0) || all(x==1)))) {
                     # the hard case: some transitions use one strata variable, some
                     #  transitions use another.  We need to keep them separate
@@ -472,14 +490,16 @@ coxph <- function(formula, data, weights, subset, na.action,
                 }
             }
         }
-        else stratum_map <- tmap[1,,drop=FALSE]
+        else smap <- tmap[1,,drop=FALSE]
         cmap <- parsecovar3(tmap, colnames(X), attr(X, "assign"), covlist2$phbaseline)
-        xstack <- stacker(cmap, stratum_map, as.integer(istate), X, Y, strata=istrat,
+        xstack <- stacker(cmap, smap, as.integer(istate), X, Y, strata=istrat,
                           states=states)
 
         rkeep <- unique(xstack$rindex)
         transitions <- survcheck2(Y[rkeep,], id[rkeep], istate[rkeep])$transitions
 
+        Xsave <- X  # the originals may be needed later
+        Ysave <- Y
         X <- xstack$X
         Y <- xstack$Y
         istrat <- xstack$strata
@@ -552,7 +572,7 @@ coxph <- function(formula, data, weights, subset, na.action,
                                     weights=weights, method=method, 
                                     rname, nocenter=nocenter)
         }
-        else stop(paste ("Unknown method", method))
+        else stop(paste ("Unknown method to ties", method))
     }
     if (is.character(fit)) {
         fit <- list(fail=fit)
@@ -637,11 +657,13 @@ coxph <- function(formula, data, weights, subset, na.action,
             fit$model <- mf
         }
         if (x)  {
-            fit$x <- X
+            if (multi) fit$x <- Xsave else fit$x <- X
             if (length(timetrans)) fit$strata <- istrat
             else if (length(strats)) fit$strata <- strata.keep
         }
-        if (y)  fit$y <- Y
+        if (y)  {
+            if (multi) fit$y <- Ysave else fit$y <- Y
+        }
         fit$timefix <- control$timefix  # remember this option
     }
     if (!is.null(weights) && any(weights!=1)) fit$weights <- weights
@@ -649,16 +671,48 @@ coxph <- function(formula, data, weights, subset, na.action,
         fit$transitions <- transitions
         fit$states <- states
         fit$cmap <- cmap
-        fit$stratum_map <- stratum_map   # why not 'stratamap'?  Confusion with fit$strata
-        fit$resid <- rowsum(fit$resid, xstack$rindex)
+        fit$smap <- smap   # why not 'stratamap'?  Confusion with fit$strata
+        nonzero <- which(colSums(cmap)!=0)
+        fit$rmap <- cbind(row=xstack$rindex, transition= nonzero[xstack$transition])
+        
         # add a suffix to each coefficent name.  Those that map to multiple transitions
         #  get the first transition they map to
         single <- apply(cmap, 1, function(x) all(x %in% c(0, max(x)))) #only 1 coef
         cindx <- col(cmap)[match(1:length(fit$coefficients), cmap)]
         rindx <- row(cmap)[match(1:length(fit$coefficients), cmap)]
         suffix <- ifelse(single[rindx], "", paste0("_", colnames(cmap)[cindx]))
-        names(fit$coefficients) <- paste0(names(fit$coefficients), suffix)
-        if (x) fit$strata <- istrat  # save the expanded strata
+        newname <- paste0(names(fit$coefficients), suffix)
+        if (any(covlist2$phbaseline > 0)) {
+            # for proportional baselines, use a better name
+            base  <- colnames(tmap)[covlist2$phbaseline]
+            child <- colnames(tmap)[which(covlist2$phbaseline >0)]
+            indx <- 1 + length(newname) - length(base):1 # coefs are the last ones
+            newname[indx] <-  paste0("ph(", child, "/", base, ")")
+            phrow <- apply(cmap, 1, function(x) all(x[x>0] %in% indx))
+            matcoef <- cmap[!phrow,,drop=FALSE ] # ph() terms exluded 
+            }
+        else matcoef <- cmap   
+        names(fit$coefficients) <- newname
+        
+        if (FALSE) { 
+            # an idea that was tried, then paused: make the linear predictors
+            # and residuals into matrices with one column per transition
+            matcoef[matcoef>0] <- fit$coefficients[matcoef]
+            temp <- Xsave %*% matcoef
+            colnames(temp) <- colnames(cmap)
+            fit$linear.predictors <- temp
+
+            temp <- matrix(0., nrow=nrow(Xsave), ncol=ncol(fit$cmap))
+            temp[cbind(xstack$rindex, xstack$transition)] <- fit$residuals
+            # if there are any transitions with no covariates, residuals have not
+            #  yet been calculated for those.
+            if (any(colSums(cmap) ==0)) {
+                from.state <- as.numeric(sub(":.*$", "", colnames(cmap)))
+                to.state   <- as.numeric(sub("^.*:", "", colnames(cmap)))
+               # warning("no covariate residuals not filled in")
+            }
+            fit$residuals <- temp
+        }
         class(fit) <- c("coxphms", class(fit))
     }
     names(fit$means) <- names(fit$coefficients)
@@ -666,7 +720,8 @@ coxph <- function(formula, data, weights, subset, na.action,
     fit$formula <- formula(Terms)
     if (length(xlevels) >0) fit$xlevels <- xlevels
     fit$contrasts <- contr.save
-    if (any(offset !=0)) fit$offset <- offset
+    if (meanoffset !=0) fit$linear.predictors <- fit$linear.predictors + meanoffset
+    if (x & any(offset !=0)) fit$offset <- offset
 
     fit$call <- Call
     fit

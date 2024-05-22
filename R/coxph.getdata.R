@@ -1,17 +1,19 @@
 #
 # Reconstruct the Cox model data.  This is done in many routines.
 # Users use model.matrix.coxph and model.frame.coxph methods, but they
-#  do not extract strata or offset.
+#  do not extract strata, offset, or istate
 #
 # The "stratax" name is to avoid conflicts with the strata() function, but
 #   still allow users to type "strata" as an arg.
 #
 coxph.getdata <- function(fit, y=TRUE, x=TRUE, stratax=TRUE, 
-                          weights=TRUE, offset=FALSE) {
+                          weights=TRUE, offset=FALSE, id=TRUE, cluster=TRUE) {
     ty <- fit[['y']]  #avoid grabbing this by accident due to partial matching
     tx <- fit[['x']]  #  for x, fit$x will get fit$xlevels --> not good
     twt <- fit[["weights"]]
     toff <- fit[["offset"]]
+    if (is.null(fit$call$id)) id <- FALSE  # there is no id to return
+    if (is.null(fit$call$cluster)) cluster <- FALSE
 
     # if x or y is present, use it to set n
     if (!is.null(ty)) n <- nrow(ty)
@@ -36,8 +38,9 @@ coxph.getdata <- function(fit, y=TRUE, x=TRUE, stratax=TRUE,
     if (length(strats)==0 && length(strat)==0 & !coxms) stratax <- FALSE
 
     if ((y && is.null(ty)) || (x && is.null(tx)) || 
-        (weights && is.null(twt)) ||  
-	(stratax && is.null(strat)) || (offset && is.null(toff))) {
+        (weights && is.null(twt)) ||  cluster || id ||
+	(stratax && is.null(strat)) || (offset && is.null(toff)) ||
+        !is.null(fit$call$istate)) {
 	# get the model frame
 	mf <- stats::model.frame(fit)
         n <- nrow(mf)
@@ -52,17 +55,16 @@ coxph.getdata <- function(fit, y=TRUE, x=TRUE, stratax=TRUE,
             toff <- model.extract(mf, 'offset')
             if (is.null(toff)) toff <- rep(0.0, n)
         }
+        if (id) idx <- model.extract(mf, "id")
+        if (cluster) clusterx <- model.extract(mf, "cluster")
 
-        if (inherits(fit, "coxphms") && 
-            ((y && is.null(ty)) ||  ((x | stratax) && is.null(tx)))) {
-            # If we need either of y or x, both have to be fetched
-            #  due to the need for a call to stacker()
-            # If both were saved in the model, they will be post-stacker
-            id <- model.extract(mf, "id")
+        if (inherits(fit, "coxphms")) {
+            # we need to call stacker
+            idx <- model.extract(mf, "id")
             istate <- model.extract(mf, "istate")
             ty <- model.response(mf)
             if (is.null(fit$timefix) || fit$timefix) ty <- aeqSurv(ty) 
-            check <- survcheck2(ty, id, istate)
+            check <- survcheck2(ty, idx, istate)
             tx <- model.matrix.coxph(fit, data=mf)
             if (length(strats)) {
   		temp <- untangle.specials(Terms, 'strata', 1)
@@ -70,7 +72,7 @@ coxph.getdata <- function(fit, y=TRUE, x=TRUE, stratax=TRUE,
             }
             else strat <- NULL
             # Now expand the data
-            xstack <- stacker(fit$cmap, fit$stratum_map, as.integer(check$istate), tx, ty, 
+            xstack <- stacker(fit$cmap, fit$smap, as.integer(check$istate), tx, ty, 
                               strat, check$states)
             tx <- xstack$X
             ty <- xstack$Y
@@ -78,6 +80,8 @@ coxph.getdata <- function(fit, y=TRUE, x=TRUE, stratax=TRUE,
             stratax <- TRUE
             if (offset) toff <- toff[xstack$rindex]
             if (weights) twt  <- twt[xstack$rindex]
+            if (id) idx <- idx[xstack$rindex]
+            if (cluster) clusterx <- clusterx[xstack$rindex]
 
             # And last, toss missing values, which had been deferred
             ismiss <- is.nan(ty) | apply(is.na(tx), 1, any)
@@ -89,6 +93,8 @@ coxph.getdata <- function(fit, y=TRUE, x=TRUE, stratax=TRUE,
                 if (y) ty<- ty[!ismiss]
                 if (x) tx <- tx[!ismiss,,drop=FALSE]
                 if (stratax) strat <- strat[!ismiss]
+                if (id) idx <- idx[!ismiss]
+                if (cluster) clusterx <- clusterx[!ismiss]
             }       
         } 
         else { # not multi-state, or everything was there
@@ -114,5 +120,7 @@ coxph.getdata <- function(fit, y=TRUE, x=TRUE, stratax=TRUE,
     if (stratax)  temp$strata <- strat
     if (offset)  temp$offset <- toff
     if (weights) temp$weights <- twt
+    if (id) temp$id <- idx
+    if (cluster) temp$cluster <- clusterx
     temp
     }

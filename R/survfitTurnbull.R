@@ -8,7 +8,7 @@ survfitTurnbull <- function(x, y, weights,
                        conf.type=c('log',  'log-log',  'plain', 'none',
                                    'logit', 'arcsin'),
                        conf.lower=c('usual', 'peto', 'modified'),
-		       start.time) {
+		       start.time, robust, cluster) {
 			     
     type <- match.arg(type)
     error <- match.arg(error)
@@ -233,7 +233,8 @@ survfitTurnbull <- function(x, y, weights,
     uniquex <- sort(unique(x))
     for (i in 1:nstrat) {
 	who <- (x== uniquex[i])
-	tfit <- doit(y[who,,drop=FALSE], status[who], weights[who])
+	tfit <- doit(y[who,,drop=FALSE], status[who], weights[who],
+                     robust= robust, cluster= cluster)
 	time[[i]]   <- tfit$time
 	n.risk[[i]] <- tfit$n.risk
 	surv[[i]]   <- tfit$surv
@@ -261,7 +262,7 @@ survfitTurnbull <- function(x, y, weights,
 		 n.event= unlist(n.event),
 		 n.censor = unlist(n.cens),
 		 surv = unlist(surv),
-		 type='right')
+		 type='interval')
     
     if (nstrat >1) {
         strata <- unlist(lapply(time, length))

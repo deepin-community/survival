@@ -34,26 +34,28 @@ residuals.coxph <-
 	if (!inherits(Terms, 'terms'))
 		stop("invalid terms component of object")
 	strats <- attr(Terms, "specials")$strata
-	if (is.null(y)  ||  (is.null(x) && type!= 'deviance')) {
+	if (is.null(y)  ||  (is.null(x) && type!= 'deviance') ||
+            inherits(object, "coxphms")) {
 	    temp <- coxph.getdata(object, y=TRUE, x=TRUE, stratax=TRUE)
 	    y <- temp$y
 	    x <- temp$x
-	    if (length(strats)) strat <- temp$strata
+	    strat <- temp$strata
         }
 
 	ny <- ncol(y)
 	status <- y[,ny,drop=TRUE]
 
 	if (type != 'deviance') {
-	    nstrat <- as.numeric(strat)
 	    nvar <- ncol(x)
 	    if (is.null(strat)) {
 		ord <- order(y[,ny-1], -status)
-		newstrat <- rep(0,n)
+		newstrat <- integer(n)
+                istrat <- integer(n)  # used by score resdiuals
             }
 	    else {
-		ord <- order(nstrat, y[,ny-1], -status)
-		newstrat <- c(diff(as.numeric(nstrat[ord]))!=0 ,1)
+                istrat <- as.integer(strat)  # strat is a factor
+		ord <- order(istrat, y[,ny-1], -status)
+		newstrat <- c(diff(as.numeric(istrat[ord]))!=0 ,1)
             }
 	    newstrat[n] <- 1
 
@@ -61,6 +63,11 @@ residuals.coxph <-
 	    x <- x[ord,]
 	    y <- y[ord,]
 	    score <- exp(object$linear.predictors)[ord]
+            istrat <- istrat[ord]
+            if (ny==3) {
+                if (is.null(strat)) sort1 <- order(y[,1])
+                else sort1 <- order(istrat, y[,1])
+            }
         }
     }
 
@@ -114,26 +121,27 @@ residuals.coxph <-
 	    resid <- .Call(Ccoxscore2, 
                            y, 
                            x, 
-                           newstrat,
+                           istrat,
                            score,
                            weights[ord],
                            as.integer(method=='efron'))
         }
 	else {
-	    resid<- .Call(Cagscore2,
+	    resid<- .Call(Cagscore3,
                            y, 
                            x, 
-                           newstrat,
+                           istrat,
                            score,
                            weights[ord],
-                           as.integer(method=='efron'))
+                           as.integer(method=='efron'), 
+                           sort1 -1L)
         }
         
 	if (nvar >1) {
 	    rr <- matrix(0, n, nvar)
 	    rr[ord,] <- resid
-	    dimnames(rr) <- list(names(object$residuals), 
-				 names(object$coefficients))
+            dimnames(rr) <- list(names(object$residuals), 
+                                     names(object$coefficients))
         }
 	else rr[ord] <- resid
 

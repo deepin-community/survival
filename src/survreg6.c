@@ -55,23 +55,33 @@ SEXP survreg6(SEXP maxiter2,   SEXP nvarx,  SEXP y,
     double newlk;
     double *loglik, eps, tol_chol;
     double *beta;
-    Sint   *flag;
+    int    *flag;
     SEXP   out_beta;
     int    nvar, nvar2, nstrat;
     double **covar;
-    Sint   *strat ;
+    int    *strat ;
     double *time2, *time1, *status;
     double *offset;
     double **imat, **JJ;
     double *u, *wt, *usave;
-    double (*dolik)();   /* will be pointed to survregc1 or survregc2 */
     SEXP  z;
     double *zptr = NULL;
     SEXP  out_iter, out_loglik, out_imat, out_flag;
     SEXP  out_u;
     SEXP  rlist, rlistnames;
-    Sint *iter2;
+    int  *iter2;
     int nprotect;
+
+    /* 
+    ** This will be pointed to survregc1 (built in distributions) or
+    **  survregc2 (user specified)
+    */
+    double (*dolik)(int n,       int nvar,     int nstrat,      int whichcase,
+		 double *beta,   int dist,     int *strat,     double *offset,
+		 double *time1,  double *time2, double *status, double *wt,
+		 double **covar, double **imat, double **JJ,    double *u, 
+		 SEXP expr,      SEXP rho,      double *z,      int nf,
+		 int *frail,     double *fdiag, double *jdiag );
 
     /*
     ** The only input arg that is overwritten is beta
@@ -119,7 +129,7 @@ SEXP survreg6(SEXP maxiter2,   SEXP nvarx,  SEXP y,
     **   parent routine, and also used to "backtrack" when we need to fail
     **   over to a Fisher step after NR + halving didn't work
     */
-    newbeta = (double *) Calloc(LENGTH(beta2) + nvar2 + nvar2*nvar2, double);
+    newbeta = (double *) CALLOC(LENGTH(beta2) + nvar2 + nvar2*nvar2, double);
     u = newbeta + length(beta2);
     JJ  = dmatrix(u +nvar2, nvar2, nvar2);
 
@@ -329,7 +339,7 @@ alldone:
 #endif    
 
     UNPROTECT(nprotect + 2);
-    Free(newbeta);
+    FREE(newbeta);
     return(rlist);
     }
     
