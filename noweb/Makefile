@@ -12,6 +12,7 @@ PARTS = main.Rnw \
 	parse.Rnw \
 	pyears.Rnw pyears2.Rnw \
 	residuals.survfit.Rnw \
+	residuals.survfit2.Rnw \
 	residuals.survreg.Rnw \
 	survfit.Rnw \
 	survfitKM.Rnw \
@@ -26,6 +27,7 @@ PARTS = main.Rnw \
 	zph.Rnw \
 	tail
 #	coxdetail.nw
+#	residuals.survfit2.Rnw\
 
 SFUN =  agreg.fit.R \
 	agsurv.R \
@@ -40,6 +42,7 @@ SFUN =  agreg.fit.R \
 	pyears.R \
 	print.pyears.R \
 	residuals.survfit.R \
+	residuals.survfitcox.R \
 	residuals.survreg.R\
 	statefig.R \
 	survexp.R \
@@ -57,7 +60,7 @@ SFUN =  agreg.fit.R \
 CFUN =  agfit4.c \
         agsurv4.c agsurv5.c \
 	cdecomp.c \
-        concordance3.c coxcount1.c \
+        concordance3.c \
         coxexact.c \
 	survfitci.c \
 	survfitkm.c \

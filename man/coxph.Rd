@@ -26,7 +26,8 @@ coxph(formula, data=, weights, subset,
   \item{formula}{
     a formula object, with the response on the left of a \code{~} operator, and 
     the terms on the right.  The response must be a survival object as 
-    returned by the \code{Surv} function. 
+    returned by the \code{Surv} function.  For a multi-state model the
+    formula may be a list of formulas.
   }
   \item{data}{
     a data.frame in which to interpret the variables named in 
@@ -57,15 +58,13 @@ coxph(formula, data=, weights, subset,
   }
   \item{ties}{
     a character string specifying the method for tie handling.  If there  
-    are no tied death times all the methods are equivalent. 
-    Nearly all Cox regression programs use the Breslow method by default, 
-    but not this one. 
-    The Efron approximation is used as the default here, it is more 
+    are no tied death times all the methods are equivalent.
+    The Efron approximation is used as the default, it is more 
     accurate when dealing with tied death times, and is as efficient 
-    computationally. 
+    computationally. (But see below for multi-state models.)
     The ``exact partial likelihood'' is 
     equivalent to a conditional logistic model, and is appropriate when
-    the times are a small set of discrete values.  See further below.
+    the times are a small set of discrete values.
   }
   \item{singular.ok}{
     logical value indicating how to handle collinearity in the model matrix. 
@@ -108,13 +107,14 @@ coxph(formula, data=, weights, subset,
   \item{tt}{optional list of time-transform functions.}
   \item{method}{alternate name for the \code{ties} argument.}
   \item{nocenter}{columns of the X matrix whose values lie strictly
-      within this set are not recentered}
+    within this set are not recentered.  Remember that a factor
+    variable becomes a set of 0/1 columns.}
   \item{...}{Other arguments will be passed to \code{\link{coxph.control}}
   }
 }
 \value{
 an object of class \code{coxph} representing the fit. 
-See \code{coxph.object} for details.  
+See \code{coxph.object} and \code{coxphms.object} for details.  
 }
 \section{Side Effects}{
   Depending on the call, the \code{predict}, \code{residuals},
@@ -242,12 +242,23 @@ only a few unique values, and some packages refer to this as the
 Prentice which is not implemented here.
 
 The calculation of the exact partial likelihood is numerically intense.
-Say for instance 180 subjects are at risk on day 7 of which 15 had an event; then
-the code needs to compute sums over all 180-choose-15 > 10^43 different
+Say for instance 180 subjects are at risk on day 7 of which 15 had an event;
+then the code needs to compute sums over all 180-choose-15 > 10^43 different
 possible subsets of size 15.  There is an efficient recursive algorithm
 for this task, but even with this the computation can be insufferably
 long.  With (start, stop) data it is much worse since the recursion
 needs to start anew for each unique start time.
+
+Multi state models are a more difficult case.
+First of all, a proper extension of the Efron argument is much more
+difficult to do, and this author is not yet fully convinced that the
+resulting algorithm is defensible.  
+Secondly, the current code for Efron case does not consistently
+compute that extended logic (and extension would require major changes
+in the code).  Due to this
+complexity, the default is \code{ties='breslow'} for the multistate
+case. If \code{ties='efron'} is selected the current code will, in
+effect, only apply to to tied transitions of the same type.
 
 A separate issue is that of artificial ties due to floating-point
 imprecision. See the vignette on this topic for a full explanation or
@@ -270,10 +281,10 @@ Therneau, T., Grambsch, P., Modeling Survival Data: Extending the Cox Model.
 Springer-Verlag, 2000.
 }
 \seealso{
-\code{\link{coxph.object}}, \code{\link{coxph.control}},
-\code{\link{cluster}},  \code{\link{strata}},  \code{\link{Surv}},
-\code{\link{survfit}}, \code{\link{pspline}}, 
-\code{\link{ridge}}.   
+  \code{\link{coxph.object}}, \code{\link{coxphms.object}},
+  \code{\link{coxph.control}},
+  \code{\link{cluster}},  \code{\link{strata}},  \code{\link{Surv}},
+  \code{\link{survfit}}, \code{\link{pspline}}. 
 }
 \examples{
 # Create the simplest test data set 

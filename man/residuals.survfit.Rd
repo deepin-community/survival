@@ -14,16 +14,19 @@
   \item{object}{a \code{survfit} object}
   \item{times}{a vector of times at which the residuals are desired}
   \item{type}{the type of residual, see below}
-  \item{collapse}{add the residuals for all subjects in a cluster}
+  \item{collapse}{add the residuals for all subjects in a cluster. If
+    the \code{survfit} object used an \code{id} statement, the default is
+    to collapse over that variable.}
   \item{weighted}{weight the residuals by each observation's weight}
   \item{method}{controls a choice of algorithm.  Current an internal
     debugging option.}
   \item{...}{arguments for other methods}
 }
 \details{
-This function is designed to efficiently compute the leverage residuals at a
-small number of time points; a primary use is the creation of
-pseudo-values.
+  This function is designed to efficiently compute the residuals at a
+small number of time points, also known as the infinitesmal jackknife
+(IJ).  Primary usages are the creation of
+pseudo-values and IJ estimates of variance.
 If the residuals at all time points are needed, e.g. to compute a robust
 pointwise confidence interval for the survival curve, then this can be done
 more efficiently
@@ -32,7 +35,7 @@ function.  But be aware that such matrices can get very large.
 
 The residuals are the impact of each observation or cluster on the
 resulting probability in state curves at the given time points,
-the cumulative hazard curv\code{surv} at those time points,
+the cumulative hazard curv at those time points,
 or the expected sojourn time in each state up to the given time points.
 For a simple Kaplan-Meier the \code{survfit} object contains only the
 probability in the "initial" state, i.e., the survival fraction.

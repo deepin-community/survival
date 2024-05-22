@@ -73,18 +73,28 @@ SEXP survreg7(SEXP maxiter2,   SEXP nvarx,  SEXP y,
     int nvar, nvar2, nvar3, nstrat;
     int iter;
     double newlk =0;
-    double (*dolik)();   /* will point to (*dolik) or survregc2 */
     double x1, x2, x3, x4;
     double y1, y2, y3;
     int golden, goright;
     double newpen;
 
+    /* 
+    ** This will be pointed to survregc1 (built in distributions) or
+    **  survregc2 (user specified)
+    */
+    double (*dolik)(int n,       int nvar,     int nstrat,      int whichcase,
+		 double *beta,   int dist,     int *strat,     double *offset,
+		 double *time1,  double *time2, double *status, double *wt,
+		 double **covar, double **imat, double **JJ,    double *u, 
+		 SEXP expr,      SEXP rho,      double *z,      int nf,
+		 int *frail,     double *fdiag, double *jdiag );
+
     /* pointers for the data regions of the input arguments */
     double **covar;
-    Sint   *strat ;
+    int    *strat ;
     double *time2, *time1, *status;
     double *offset;
-    Sint *fgrp;
+    int  *fgrp;
     double *wt;
 
     /* copies of the scalar input arguments */
@@ -113,7 +123,7 @@ SEXP survreg7(SEXP maxiter2,   SEXP nvarx,  SEXP y,
     double **hmat, **hinv, *beta, *hdiag;
     double *penalty;
     SEXP  rlist, rlistnames;
-    Sint *iter2, *flag;
+    int  *iter2, *flag;
     int nprotect;   /* number of PROTECT calls that I have issued */
 
     /*
@@ -174,7 +184,7 @@ SEXP survreg7(SEXP maxiter2,   SEXP nvarx,  SEXP y,
     **   parent routine, and also used to "backtrack" when we need to fail
     **   over to a Fisher step instead of an NR step
     */
-    newbeta = Calloc(LENGTH(beta2) + nvar3 + nfrail + nvar2*nvar3, double);
+    newbeta = CALLOC(LENGTH(beta2) + nvar3 + nfrail + nvar2*nvar3, double);
     jdiag = newbeta + length(beta2);
     u  = jdiag + nfrail;
     JJ  = dmatrix(u + nvar3,  nvar3, nvar2);
@@ -462,7 +472,7 @@ alldone:
 	    hinv[i-nfrail][j] = 0;
 	    }
 	}
-    Free(newbeta);
+    FREE(newbeta);
 
     /* Create the list object for return */
     PROTECT(rlist=allocVector(VECSXP, 9));

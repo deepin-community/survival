@@ -33,9 +33,8 @@ predict.coxph <- function(object, newdata,
     #  needed there if type == 'expected'
     if (length(attr(Terms, 'specials')$cluster)) {
         temp <- untangle.specials(Terms, 'cluster', 1)
-        Terms  <- object$terms[-temp$terms]
+        Terms  <- drop.special(Terms, attr(Terms, "specials")$cluster)
         }
-    else Terms <- object$terms
 
     if (type != 'expected') Terms2 <- delete.response(Terms)
     else Terms2 <- Terms
@@ -61,7 +60,8 @@ predict.coxph <- function(object, newdata,
     # This will be needed if there are strata, and is cheap to compute
     strat.term <- untangle.specials(Terms, "strata")
     if (se.fit || type=='terms' || (!missing(newdata) && type=="expected") ||
-        (has.strata && (reference=="strata") || type=="expected")) {
+        (has.strata && (reference=="strata") || type=="expected") ||
+        (reference=="zero" && any(object[["means"]] !=0))) {
         use.x <- TRUE
         if (is.null(object[['x']]) || has.weights || has.offset ||
              (has.strata && is.null(object$strata))) {
@@ -95,8 +95,7 @@ predict.coxph <- function(object, newdata,
     else {
         # I won't need strata in this case either
         if (has.strata) {
-            stemp <- untangle.specials(Terms, 'strata', 1)
-            Terms2  <- Terms2[-stemp$terms]
+            Terms2  <- drop.special(Terms2, attr(Terms2, "specials")$strata)
             has.strata <- FALSE  #remaining routine never needs to look
         }
         oldstrat <- rep(0L, n)
@@ -113,8 +112,8 @@ predict.coxph <- function(object, newdata,
         
         if (!is.null(attr(Terms, "specials")$strata) && !has.strata) {
            temp.lev <- object$xlevels
-           temp.lev[[strat.term$vars]] <- NULL
-           tcall$xlev <- temp.lev
+           temp.lev[strat.term$vars] <- NULL
+           tcall$xlev <- temp.lev   
         }
         else tcall$xlev <- object$xlevels
         mf2 <- eval(tcall, parent.frame())
@@ -125,7 +124,7 @@ predict.coxph <- function(object, newdata,
         if (has.strata) {
             if (length(strat.term$vars)==1) newstrat <- mf2[[strat.term$vars]]
             else newstrat <- strata(mf2[,strat.term$vars], shortlabel=TRUE)
-            if (any(is.na(match(newstrat, oldstrat)))) 
+            if (any(is.na(match(levels(newstrat), levels(oldstrat))))) 
                 stop("New data has a strata not found in the original model")
             else newstrat <- factor(newstrat, levels=levels(oldstrat)) #give it all
             if (length(strat.term$terms))
@@ -254,6 +253,7 @@ predict.coxph <- function(object, newdata,
 
         if (missing(newdata)) {
             offset <- offset - mean(offset)
+            if (has.strata && any(is.na(oldstrat))) is.na(newx) <- is.na(oldstrat)
             if (has.strata && reference=="strata") {
                 # We can't use as.integer(oldstrat) as an index, if oldstrat is
                 #   a factor variable with unrepresented levels as.integer could
@@ -268,6 +268,7 @@ predict.coxph <- function(object, newdata,
         }
         else {
             offset <- newoffset - mean(offset)
+            if (has.strata && any(is.na(newstrat))) is.na(newx) <- is.na(newstrat)
             if (has.strata && reference=="strata") {
                 xmeans <- rowsum(x*weights, oldstrat)/c(rowsum(weights, oldstrat))
                 newx <- newx - xmeans[match(newstrat, row.names(xmeans)),]

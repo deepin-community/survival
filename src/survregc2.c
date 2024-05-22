@@ -4,7 +4,7 @@
 **   This is the version for the "callback".  The code below
 **   was previously the dolik() routine and it's children found in 
 **   survreg3, modified for a joint R/Splus syntax.
-** This has exactly the same arguments as survregc2 and returns the
+** This has exactly the same arguments as survregc1 and returns the
 **   same values: see that routine for more comments.  This actually
 **   uses expr, rho, and z, however.
 */ 
@@ -14,11 +14,11 @@
 #define SMALL -200  /* exp(-200) is a really small loglik */
 
 double survregc2(int n,          int nvar,     int nstrat,      int whichcase,
-		 double *beta,   int dist,     Sint *strat,     double *offset,
+		 double *beta,   int dist,     int *strat,     double *offset,
 		 double *time1,  double *time2, double *status, double *wt,
 		 double **covar, double **imat, double **JJ,    double *u, 
 		 SEXP expr,      SEXP rho,      double *z,      int nf,
-		 Sint *frail,    double *fdiag, double *jdiag ) {
+		 int *frail,     double *fdiag, double *jdiag ) {
 
     int person, i,j,k;
     int nvar2;

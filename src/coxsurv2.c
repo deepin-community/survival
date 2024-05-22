@@ -1,12 +1,17 @@
 /*
 ** Survival curves for a Cox model.  This routine counts up all
-**  the totals that we need (more than we need, actually).  The number at risk
-**  is a PITA in R code.  All of the rest of the computation can be done in R,
-**  however.
+**  the totals that we need. The number at risk is a PITA in R code, but all
+**  the rest of the compuations are simple there.  This creates more totals
+**  than we currenly use, as an attempt to future proof the code.
+** 
+** coxsurv1: (time,status) for multistate
+** coxsurv2: (time1, time2, status) for multistate
+** coxsurv3: (time, status) for single state
+** coxsurv4: (time1, time2, status) for single state
 **
 **  otime:  vector of output times.  All the transitions will get reports at
-**            these time points.  (Normally this fcn is called for all of the 
-**            transitions at once, but separately for any strata.)
+**            these time points.  (To be useful, the times should be a superset
+**            of the event times, since the parent routine will do cumsums.)
 **  y   :    survival response
 **  weight:  observation weight
 **  sort1, sort2: sort indices for the start and stop time
@@ -30,11 +35,11 @@
 **    timepoint.
 **
 **  Let w1=1, w2= wt, w3= wt*risk.  The counts n[] are
-**   0-2: number at risk, w1, w2, w3,
+**   0-2: number at risk: w1, w2, w3
 **   3-5: events: w1, w2, w3
 **   6-7: censored endpoints: w1,w2
-**   8-9: censor: w1, w2
-**  10-11: Efron sums 1 and 2
+**   8-9: Efron sums 1 and 2
+**  10-11: censored counts w1 and w2
 */
 
 #include <math.h>
@@ -165,8 +170,8 @@ SEXP coxsurv2(SEXP otime2, SEXP y2, SEXP weight2,  SEXP sort12, SEXP sort22,
 
 		    if (sindex[i2]>1 && status[i2]==0) {
 			/* count them as a 'censor' */
-			n[8]++;
-			n[9]+= wt[i2];
+			n[10]++;
+			n[11]+= wt[i2];
 		    }
 		}
 
@@ -206,17 +211,17 @@ SEXP coxsurv2(SEXP otime2, SEXP y2, SEXP weight2,  SEXP sort12, SEXP sort22,
 
 	    /* Compute the Efron number at risk */
 	    if (n[3] <=1) {   /* only one event */
-		n[10]= n[2];
-		n[11] = n[2]*n[2];
+		n[8]= n[2];
+		n[9] = n[2]*n[2];
 	    }		
 	    else {
 		meanwt = n[5]/(n[3]*n[3]);  /* average weight of deaths /n */
 		for (k=0; k<n[3]; k++) {
-		    n[10] += n[2] - k*meanwt;
-		    n[11] += (n[2] -k*meanwt)*(n[2] - k*meanwt);
+		    n[8] += n[2] - k*meanwt;
+		    n[9] += (n[2] -k*meanwt)*(n[2] - k*meanwt);
 		}
-		n[10] /= n[3];
-		n[11] /= n[3];
+		n[8] /= n[3];
+		n[9] /= n[3];
 	    }		
 
 	    /* save the results */
